@@ -29,9 +29,14 @@ class ElementAttribute {
 
 class Component {
 
-  constructor(renderHookId) {
+  constructor(renderHookId, shouldRender = true) {
     this.hookId = renderHookId;
+    if (shouldRender) {
+      this.render();
+    }
   }
+
+  render() {}
 
   createRootElement(tag, cssClasses, attributes) {
     const rootElement = document.createElement(tag);
@@ -75,12 +80,19 @@ class ShoppingCart extends Component{
     this.cartItems = updatedItems;
   }
 
+  orderProducts() {
+    console.log('Ordering...')
+    console.log(this.items)
+  }
+
   render() {
     const cartEl = this.createRootElement('section','cart')
     cartEl.innerHTML = `
       <h2>Total: \$${0}</h2>
       <button>Order Now!</button>
     `;
+    const orderButton = cartEl.querySelector('button')
+    orderButton.addEventListener('click', () => this.orderProducts());
     this.totalOutput = cartEl.querySelector('h2') // this is adding a NEW property to >this<
   }
 
@@ -91,8 +103,9 @@ class ShoppingCart extends Component{
 class ProductItem extends Component{
 
   constructor(product, renderHookId) { // when ProductList creates a new instance of ProductItem, each one becomes an object inside an object, ProductItem.product DOWN 2
-    super(renderHookId)
-    this.product = product
+    super(renderHookId, false);
+    this.product = product;
+    this.render();
   }
 
   addToCart() {
@@ -122,46 +135,69 @@ class ProductItem extends Component{
 
 class ProductList extends Component{
 
-  products = [
-    new Product(
-      'A Pillow',
-      'https://i5.walmartimages.com/asr/1aa47027-c394-4515-8c0b-fb34e397bb49_1.2449a29d0e09f9cc4516d3ba1d6407ef.jpeg?odnWidth=undefined&odnHeight=undefined&odnBg=ffffff',
-      'A Soft Pillow!',
-      19.99),
-    new Product(
-      'A Carpet',
-      'https://99centfloorstore.com/wp-content/uploads/2018/04/CASHMERE-EXEPTIONAL-II-CARPET.jpg',
-      'A Pillow Carpet?',
-      89.99
-    )
-  ];
+  products = [];
 
   constructor (renderHookId) {
     super(renderHookId)// gets 'app' from Shops instantiation of ProductList, where it passes 'app' as the renderHookId arg, which goes to the Component class where this instance becomes this.hookId
+    this.fetchProducts();
+  }
+
+  fetchProducts() {
+    this.products = [
+      new Product(
+        'A Pillow',
+        'https://i5.walmartimages.com/asr/1aa47027-c394-4515-8c0b-fb34e397bb49_1.2449a29d0e09f9cc4516d3ba1d6407ef.jpeg?odnWidth=undefined&odnHeight=undefined&odnBg=ffffff',
+        'A Soft Pillow!',
+        19.99
+      ),
+      new Product(
+        'A Carpet',
+        'https://99centfloorstore.com/wp-content/uploads/2018/04/CASHMERE-EXEPTIONAL-II-CARPET.jpg',
+        'A Pillow Carpet?',
+        89.99
+      )
+    ];
+    this.renderProducts();
+  }
+
+  renderProducts() {
+    for (const prod of this.products) { // going through everything in ProductList.products, iterating each as prod
+      // const productItem = new ProductItem(prod, 'prod-list') // passes each individual item in the ProductList.products array to ProductItem class ^^^1 // prod = product arg, 'prod-list' = super(renderhookId) arg
+
+      new ProductItem(prod, 'prod-list')
+
+      // productItem.render(); // now that there is an instance of ProductItem.product, we are calling render on that productItem ^^^ 3
+    }
   }
 
   render() {
-    const prodList = this.createRootElement('ul','product-list', [
+    this.createRootElement('ul','product-list', [
       new ElementAttribute('id', 'prod-list')
     ]);
-    for (const prod of this.products) { // going through everything in ProductList.products, iterating each as prod
-      const productItem = new ProductItem(prod, 'prod-list') // passes each individual item in the ProductList.products array to ProductItem class ^^^1 // prod = product arg, 'prod-list' = super(renderhookId) arg
-      productItem.render(); // now that there is an instance of ProductItem.product, we are calling render on that productItem ^^^ 3
+    if (this.products && this.products.length > 0) {
+      this.renderProducts();
     }
-    return prodList
   }
 
 }
 
 
 
-class Shop {
+class Shop extends Component{
+
+  constructor() {
+    super();
+  }
 
   render(){
     this.cart = new ShoppingCart('app'); // get access to ShoppingCart class // stores it as a field in shop (Shop.cart) and passes through 'app' as arg1 in the Component constructor
-    this.cart.render() // calls the field Shop.cart.render(), which points to ShoppingCart.render()
-    const productList = new ProductList('app'); // get access to ProductList class and passes through 'app' as arg1 in the Component constructor
-    productList.render(); // calls ProductList('app').render()
+
+    // this.cart.render() // calls the field Shop.cart.render(), which points to ShoppingCart.render()
+    // const productList = new ProductList('app'); // get access to ProductList class and passes through 'app' as arg1 in the Component constructor
+
+    new ProductList('app')
+
+    // productList.render(); // calls ProductList('app').render()
   }
 
 }
@@ -174,7 +210,9 @@ class App {
 
   static init() {
     const shop = new Shop();
-    shop.render(); // starts the chain that renders the information into HTML
+
+    // shop.render(); // starts the chain that renders the information into HTML
+
     this.cart = shop.cart // adds cart as a field to App, App.cart = shop.cart(field on Shop added after shop.render() is called) = new ShoppingCart() so access to ShoppingCart
   }
 
